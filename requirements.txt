@@ -1,0 +1,15 @@
+pandas
+numpy
+scikit-learn
+pydantic
+pydantic-settings
+python-dotenv
+langchain
+langgraph
+langchain-groq
+fastapi
+uvicorn[standard]
+streamlit
+python-multipart
+pytest
+httpx
