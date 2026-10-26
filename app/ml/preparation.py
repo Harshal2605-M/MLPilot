@@ -119,6 +119,86 @@ def analyze_numeric_features(X_train):
 
     return analysis
 
+def analyze_numeric_features(X_train):
+    numeric_data = X_train.select_dtypes(include="number")
+
+    analysis = {}
+
+    for column in numeric_data.columns:
+        values = numeric_data[column]
+        non_missing = values.dropna()
+
+        missing_percentage = float(values.isna().mean() * 100)
+
+        # All values are missing
+        if non_missing.empty:
+            analysis[column] = {
+                "missing_percentage": missing_percentage,
+                "skewness": None,
+                "outlier_percentage": None,
+                "imputation_strategy": "manual_review",
+                "scaling_strategy": "manual_review",
+            }
+            continue
+
+        # High missingness requires user review
+        if missing_percentage > 30:
+            analysis[column] = {
+                "missing_percentage": missing_percentage,
+                "skewness": None,
+                "outlier_percentage": None,
+                "imputation_strategy": "manual_review",
+                "scaling_strategy": "manual_review",
+            }
+            continue
+
+        skewness = non_missing.skew()
+
+        # Handle undefined skewness, such as a constant column
+        if pd.isna(skewness):
+            skewness = 0.0
+
+        q1 = non_missing.quantile(0.25)
+        q3 = non_missing.quantile(0.75)
+        iqr = q3 - q1
+
+        if iqr == 0:
+            outlier_percentage = 0.0
+        else:
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+
+            outliers = (
+                (non_missing < lower_bound)
+                | (non_missing > upper_bound)
+            )
+
+            outlier_percentage = float(outliers.mean() * 100)
+
+        has_many_outliers = outlier_percentage > 5
+        is_highly_skewed = abs(skewness) > 1
+
+        if has_many_outliers or is_highly_skewed:
+            imputation_strategy = (
+                "median" if missing_percentage > 0 else "none"
+            )
+            scaling_strategy = "robust"
+        else:
+            imputation_strategy = (
+                "mean" if missing_percentage > 0 else "none"
+            )
+            scaling_strategy = "standard"
+
+        analysis[column] = {
+            "missing_percentage": missing_percentage,
+            "skewness": float(skewness),
+            "outlier_percentage": float(outlier_percentage),
+            "imputation_strategy": imputation_strategy,
+            "scaling_strategy": scaling_strategy,
+        }
+
+    return analysis
+
 
 def validate_ordinal_categories(X_train, ordinal_categories):
     """Validate user-approved category orders against training data."""
@@ -222,9 +302,11 @@ def analyze_categorical_features(X_train, ordinal_categories=None):
 
 
         if missing_percentage > 30:
-            imputation_strategy = "missing_category"
-        else:
+            imputation_strategy = "manual_review"
+        elif missing_percentage > 0:
             imputation_strategy = "most_frequent"
+        else:
+            imputation_strategy = "none"
 
         analysis[column] = {
             "missing_percentage": missing_percentage,

@@ -107,8 +107,8 @@ def test_analyze_numeric_features():
     assert "Age" in result
     assert "Salary" in result
 
-    assert result["Age"]["imputation_strategy"] == "mean"
-    assert result["Salary"]["imputation_strategy"] == "median"
+    assert result["Age"]["imputation_strategy"] == "none"
+    assert result["Salary"]["imputation_strategy"] == "none"
 
 def test_analyze_categorical_features():
     X_train = pd.DataFrame({
@@ -120,7 +120,7 @@ def test_analyze_categorical_features():
 
     assert result["City"]["unique_categories"] == 3
     assert result["City"]["encoding_strategy"] == "onehot"
-    assert result["Department"]["imputation_strategy"] == "most_frequent"
+    assert result["Department"]["imputation_strategy"] == "none"
 
 
 import pytest
@@ -146,3 +146,13 @@ def test_ordinal_order_missing_observed_category():
             X_train,
             ordinal_categories=ordinal_categories,
         )
+
+
+def test_categorical_high_missingness_requires_manual_review():
+    X_train = pd.DataFrame({
+        "City": ["Pune", None, None, None, "Mumbai"]
+    })
+
+    result = analyze_categorical_features(X_train)
+
+    assert result["City"]["imputation_strategy"] == "manual_review"
