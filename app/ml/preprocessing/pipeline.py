@@ -20,43 +20,30 @@ def build_preprocessing_pipeline(
 ):
     transformers = []
 
-    if numerical_columns:
-        numerical_pipeline = build_numerical_pipeline(
-            numerical_columns=numerical_columns,
-            analysis=numerical_analysis,
-        )
+    # Build numerical transformer specifications.
+    numerical_transformers = build_numerical_pipeline(
+        numerical_columns=numerical_columns,
+        analysis=numerical_analysis,
+    )
 
-        if numerical_pipeline != "passthrough":
-            transformers.append(
-                (
-                    "numerical",
-                    numerical_pipeline,
-                    numerical_columns,
-                )
-            )
+    transformers.extend(numerical_transformers)
 
-    if nominal_columns or ordinal_categories:
-        categorical_pipeline = build_categorical_pipeline(
-            nominal_columns=nominal_columns,
-            analysis=categorical_analysis,
-            ordinal_categories=ordinal_categories,
-            approved_high_cardinality=approved_high_cardinality,
-            max_onehot_categories=max_onehot_categories,
-        )
+    # Build categorical transformer specifications.
+    categorical_transformers = build_categorical_pipeline(
+        nominal_columns=nominal_columns,
+        analysis=categorical_analysis,
+        ordinal_categories=ordinal_categories,
+        approved_high_cardinality=approved_high_cardinality,
+        max_onehot_categories=max_onehot_categories,
+    )
 
-        if categorical_pipeline != "passthrough":
-            transformers.append(
-            (
-                "categorical",
-                categorical_pipeline,
-                nominal_columns
-                + list((ordinal_categories or {}).keys()),
-            )
-        )
+    transformers.extend(categorical_transformers)
 
+    # No transformations are required.
     if not transformers:
         return "passthrough"
 
+    # One ColumnTransformer combines every feature transformer.
     return ColumnTransformer(
         transformers=transformers,
         remainder="drop",

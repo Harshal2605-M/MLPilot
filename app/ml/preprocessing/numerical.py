@@ -1,5 +1,4 @@
 
-from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -62,10 +61,4 @@ def build_numerical_pipeline(numerical_columns, analysis):
             )
         )
 
-    if not transformers:
-        return "passthrough"
-
-    return ColumnTransformer(
-        transformers=transformers,
-        remainder="drop",
-    )
+    return transformers

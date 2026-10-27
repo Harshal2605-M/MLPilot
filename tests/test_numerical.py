@@ -3,12 +3,28 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import RobustScaler, StandardScaler
-from sklearn.impute import SimpleImputer
 
 from app.ml.preprocessing.numerical import (
     build_numerical_pipeline,
 )
+
+
+def make_numerical_transformer(numerical_columns, analysis):
+    """Wrap numerical transformer specifications for unit testing."""
+    transformers = build_numerical_pipeline(
+        numerical_columns=numerical_columns,
+        analysis=analysis,
+    )
+
+    if not transformers:
+        return "passthrough"
+
+    return ColumnTransformer(
+        transformers=transformers,
+        remainder="drop",
+    )
 
 
 def test_numerical_pipeline_scales_feature():
@@ -24,7 +40,7 @@ def test_numerical_pipeline_scales_feature():
         }
     }
 
-    pipeline = build_numerical_pipeline(["Age"], analysis)
+    pipeline = make_numerical_transformer(["Age"], analysis)
     transformed = pipeline.fit_transform(X_train)
 
     assert transformed.shape == (3, 1)
@@ -44,7 +60,7 @@ def test_numerical_pipeline_uses_mean_imputation():
         }
     }
 
-    pipeline = build_numerical_pipeline(["Age"], analysis)
+    pipeline = make_numerical_transformer(["Age"], analysis)
     transformed = pipeline.fit_transform(X_train)
 
     assert transformed.shape == (3, 1)
@@ -64,7 +80,7 @@ def test_numerical_pipeline_uses_median_imputation():
         }
     }
 
-    pipeline = build_numerical_pipeline(["Income"], analysis)
+    pipeline = make_numerical_transformer(["Income"], analysis)
     transformed = pipeline.fit_transform(X_train)
 
     assert transformed.shape == (4, 1)
@@ -84,7 +100,7 @@ def test_numerical_pipeline_uses_robust_scaling():
         }
     }
 
-    pipeline = build_numerical_pipeline(["Income"], analysis)
+    pipeline = make_numerical_transformer(["Income"], analysis)
     transformed = pipeline.fit_transform(X_train)
 
     assert transformed.shape == (4, 1)
@@ -108,7 +124,7 @@ def test_numerical_pipeline_uses_standard_scaler():
         }
     }
 
-    pipeline = build_numerical_pipeline(["Age"], analysis)
+    pipeline = make_numerical_transformer(["Age"], analysis)
     pipeline.fit_transform(X_train)
 
     assert isinstance(
@@ -153,7 +169,10 @@ def test_unsupported_imputation_strategy_is_rejected():
         }
     }
 
-    with pytest.raises(ValueError, match="Unsupported imputation strategy"):
+    with pytest.raises(
+        ValueError,
+        match="Unsupported imputation strategy",
+    ):
         build_numerical_pipeline(["Age"], analysis)
 
 
@@ -166,7 +185,10 @@ def test_unsupported_scaling_strategy_is_rejected():
         }
     }
 
-    with pytest.raises(ValueError, match="Unsupported scaling strategy"):
+    with pytest.raises(
+        ValueError,
+        match="Unsupported scaling strategy",
+    ):
         build_numerical_pipeline(["Age"], analysis)
 
 
@@ -181,7 +203,7 @@ def test_missing_analysis_for_feature_is_rejected():
 
 def test_empty_numerical_columns_returns_passthrough():
     """No numerical features should require no numerical transformation."""
-    pipeline = build_numerical_pipeline(
+    pipeline = make_numerical_transformer(
         numerical_columns=[],
         analysis={},
     )
@@ -207,7 +229,7 @@ def test_multiple_numerical_features_are_processed():
         },
     }
 
-    pipeline = build_numerical_pipeline(
+    pipeline = make_numerical_transformer(
         ["Age", "Income"],
         analysis,
     )

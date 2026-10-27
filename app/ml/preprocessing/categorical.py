@@ -1,5 +1,4 @@
 
-from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
@@ -72,7 +71,7 @@ def build_categorical_pipeline(
 
         return Pipeline(steps=steps)
 
-    # Validate nominal feature configuration.
+    # Build nominal feature transformers.
     for column in nominal_columns:
         validate_analysis(column)
 
@@ -84,7 +83,6 @@ def build_categorical_pipeline(
                     f"Column '{column}' requires "
                     f"high-cardinality approval."
                 )
-
         elif strategy != "onehot":
             raise ValueError(
                 f"Column '{column}' is not approved "
@@ -110,7 +108,7 @@ def build_categorical_pipeline(
             )
         )
 
-    # Validate and build ordinal feature pipelines.
+    # Build ordinal feature transformers.
     for column, categories in ordinal_categories.items():
         validate_analysis(column)
 
@@ -145,10 +143,4 @@ def build_categorical_pipeline(
             )
         )
 
-    if not transformers:
-        return "passthrough"
-
-    return ColumnTransformer(
-        transformers=transformers,
-        remainder="drop",
-    )
+    return transformers
