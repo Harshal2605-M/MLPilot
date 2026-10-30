@@ -56,68 +56,53 @@ def split_features_target(df, target_column) :
     y = df[target_column]
     return X, y
 
+
+def prepare_dataset(df, target_column):
+    """
+    Validate the target and exclude entirely empty feature columns.
+
+    Returns:
+        X: Usable feature DataFrame.
+        y: Target Series.
+        excluded_features: Reasons for excluded columns.
+    """
+    if df.empty:
+        raise ValueError("DataFrame is empty")
+
+    if not target_column or not target_column.strip():
+        raise ValueError("Target column is empty")
+
+    if target_column not in df.columns:
+        raise ValueError("Target column doesn't exist")
+
+    if df[target_column].isna().any():
+        raise ValueError("Target column contains missing values")
+
+    X, y = split_features_target(df, target_column)
+
+    empty_columns = X.columns[X.isna().all()].tolist()
+
+    excluded_features = [
+        {
+            "column": column,
+            "reason": "All values are missing",
+        }
+        for column in empty_columns
+    ]
+
+    X = X.drop(columns=empty_columns)
+
+    if X.shape[1] == 0:
+        raise ValueError(
+            "No usable feature columns remain after dataset preparation."
+        )
+
+    return X, y, excluded_features
+
+
 def split_train_test(X, y, test_size=0.2, random_state=42) :
     X_train , X_test, y_train, y_test = train_test_split(X, y, test_size= test_size, random_state=random_state)
     return X_train , X_test, y_train, y_test
-
-def analyze_numeric_features(X_train):
-    numeric_data = X_train.select_dtypes(include = "number")
-
-    analysis = {}
-
-    for column in numeric_data.columns:
-        values = numeric_data[column]
-        non_missing = values.dropna()
-
-        missing_percentage = values.isna().mean() * 100 
-
-        if non_missing.empty:
-            analysis[column] = {
-                "missing_percentage": float(missing_percentage),
-                "skewness": None,
-                "outlier_percentage": None,
-                "imputation_strategy": "manual_review",
-                "scaling_strategy": "manual_review",
-            }
-            continue
-
-        skewness = non_missing.skew()
-
-        q1 = non_missing.quantile(0.25)
-        q3 = non_missing.quantile(0.75)
-        iqr = q3 - q1
-
-        if iqr == 0 :
-            outlier_percentage = 0.0
-
-        else :
-            lower_bound = q1 - 1.5 * iqr
-            upper_bound = q3 + 1.5 * iqr
-
-            outliers = (
-                (non_missing < lower_bound) | (non_missing > upper_bound)
-                )
-            outlier_percentage = outliers.mean() * 100
-
-            has_many_outliers = outlier_percentage > 5 
-            is_highly_skewed = skewness > 1
-
-            if has_many_outliers or is_highly_skewed:
-                imputation_strategy = "median"
-                scaling_strategy = "robust"
-            else:
-                imputation_strategy = "mean"
-                scaling_strategy = "standard"
-
-            analysis[column] = {
-            "missing_percentage": float(missing_percentage),
-            "skewness": float(skewness),
-            "outlier_percentage": float(outlier_percentage),
-            "imputation_strategy": imputation_strategy,
-            "scaling_strategy": scaling_strategy,
-        }
-
-    return analysis
 
 def analyze_numeric_features(X_train):
     numeric_data = X_train.select_dtypes(include="number")
